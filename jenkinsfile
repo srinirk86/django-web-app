@@ -1,0 +1,44 @@
+pipeline {
+    agent any
+    
+    environment {
+        DOCKER_IMAGE = 'todo-list-app'
+        DOCKERHUB_REPO = 'projectD/todo-list-app'
+    }
+    
+    stages {
+        stage('Clone Code') {
+            steps {
+                echo 'Cloning the code...'
+                git url: 'https://github.com/username/Django-Todo-App.git'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                echo 'Building the Docker image...'
+                sh 'docker build -t ${DOCKER_IMAGE} .'
+            }
+        }
+
+        stage('Push to Docker Hub') {
+            steps {
+                echo 'Pushing Docker image to Docker Hub...'
+                withCredentials([usernamePassword(credentialsId: 'dockerHub',
+                    passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
+                    sh 'docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD'
+                    sh 'docker tag ${DOCKER_IMAGE} ${DOCKER_USERNAME}/${DOCKER_IMAGE}:latest'
+                    sh 'docker push ${DOCKER_USERNAME}/${DOCKER_IMAGE}:latest'
+                }
+            }
+        }
+
+        stage('Deploy Application') {
+            steps {
+                echo 'Deploying application...'
+                sh 'docker-compose down && docker-compose up -d'
+            }
+        }
+    }
+}
+
